@@ -1,0 +1,44 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thi Thử Toán 2025 - Thầy Quang Trí</title>
+    
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']], // Cho phép dùng $...$
+        displayMath: [['$$', '$$'], ['\\[', '\\]']], // Cho phép dùng $$...$$
+        processEscapes: true
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+    </script>
+
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .section-title { background-color: #007bff; color: white; padding: 10px; border-radius: 5px; margin-top: 30px; }
+        .question-box { margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #eee; }
+        .question-text { font-weight: bold; margin-bottom: 10px; display: block; }
+        .options label { display: block; margin-bottom: 5px; cursor: pointer; }
+        
+        /* Style cho phần Đúng/Sai */
+        .tf-grid { display: grid; grid-template-columns: 3fr 1fr 1fr; gap: 10px; align-items: center; }
+        .tf-header { font-weight: bold; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+        .tf-row { display: contents; }
+        
+        button#submit-btn { background-color: #28a745; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; display: block; width: 100%; margin-top: 20px; }
+        button#submit-btn:hover { background-color: #218838; }
+        
+        #result-area { margin-top: 20px; padding: 20px; background-color: #e2e6ea; display: none; border-radius: 5px; }
+        .score-display { font-size: 24px; color: #dc3545; font-weight: bold; }
+        
+        /* Fix lỗi hiển thị công thức quá dài trên điện thoại */
+        mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+    </style>
+</head>
