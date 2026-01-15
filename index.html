@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thư Viện Đề Thi</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f6f8; }
+        h1 { text-align: center; color: #2c3e50; }
+        .search-box { width: 100%; padding: 15px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
+        #file-list { list-style: none; padding: 0; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .file-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .file-item:last-child { border-bottom: none; }
+        .file-item a { text-decoration: none; color: #0366d6; font-weight: 500; }
+        .file-item a:hover { text-decoration: underline; }
+        .path-tag { font-size: 0.85em; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>📚 Thư Viện Đề Thi</h1>
+    <input type="text" id="search" class="search-box" placeholder="🔍 Nhập tên bài, tên chương hoặc khối để tìm..." onkeyup="filterFiles()">
+    <ul id="file-list">Đang tải dữ liệu...</ul>
+
+    <script>
+        // --- CẤU HÌNH ---
+        const USERNAME = 'nvquyet1701'; // Ví dụ: nguyenvana
+        const REPO_NAME = 'thu-vien-de-thi';  // Ví dụ: thu-vien-de-thi
+        // ----------------
+        
+        const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO_NAME}/git/trees/main?recursive=1`;
+        let allFiles = [];
+
+        async function fetchFiles() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                // Lọc chỉ lấy file (không lấy folder) và bỏ qua file index.html
+                allFiles = data.tree.filter(item => item.type === 'blob' && item.path !== 'index.html');
+                displayFiles(allFiles);
+            } catch (error) {
+                document.getElementById('file-list').innerHTML = '<li style="padding:15px; color:red">Lỗi: Không tải được dữ liệu. Kiểm tra lại Tên User/Repo.</li>';
+            }
+        }
+
+        function displayFiles(files) {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            files.forEach(file => {
+                // Tạo link tải về
+                const fileUrl = `https://github.com/${USERNAME}/${REPO_NAME}/blob/main/${file.path}`;
+                
+                // Tách đường dẫn để hiển thị đẹp hơn
+                const parts = file.path.split('/');
+                const fileName = parts.pop(); // Tên file
+                const folderPath = parts.join(' > '); // Đường dẫn thư mục
+                
+                const li = document.createElement('li');
+                li.className = 'file-item';
+                li.innerHTML = `
+                    <div>
+                        <span class="path-tag">${folderPath}</span>
+                        <a href="${fileUrl}" target="_blank">${fileName}</a>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function filterFiles() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const filtered = allFiles.filter(file => file.path.toLowerCase().includes(query));
+            displayFiles(filtered);
+        }
+
+        fetchFiles();
+    </script>
+</body>
+</html>
