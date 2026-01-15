@@ -5,76 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thư Viện Đề Thi</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f6f8; }
-        h1 { text-align: center; color: #2c3e50; }
-        .search-box { width: 100%; padding: 15px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
-        #file-list { list-style: none; padding: 0; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .file-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .file-item:last-child { border-bottom: none; }
-        .file-item a { text-decoration: none; color: #0366d6; font-weight: 500; }
-        .file-item a:hover { text-decoration: underline; }
-        .path-tag { font-size: 0.85em; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 10px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f6f8fa; color: #24292e; }
+        
+        /* Header & Search */
+        h1 { text-align: center; color: #0366d6; margin-bottom: 20px; }
+        .search-container { position: relative; margin-bottom: 20px; }
+        .search-box { width: 100%; padding: 12px 15px; font-size: 16px; border: 1px solid #d1d5da; border-radius: 6px; box-sizing: border-box; box-shadow: inset 0 1px 2px rgba(27,31,35,0.075); transition: 0.2s; }
+        .search-box:focus { border-color: #0366d6; outline: none; box-shadow: 0 0 0 3px rgba(3,102,214,0.3); }
+
+        /* Breadcrumb (Thanh đường dẫn) */
+        .breadcrumb { background: #fff; padding: 10px 15px; border-radius: 6px 6px 0 0; border: 1px solid #e1e4e8; border-bottom: none; display: flex; align-items: center; gap: 5px; font-size: 14px; color: #586069; }
+        .breadcrumb span { cursor: pointer; color: #0366d6; font-weight: 500; }
+        .breadcrumb span:hover { text-decoration: underline; }
+        .breadcrumb span.current { color: #586069; pointer-events: none; text-decoration: none; font-weight: normal; }
+        
+        /* List Items */
+        #file-list { list-style: none; padding: 0; margin: 0; background: white; border: 1px solid #e1e4e8; border-radius: 0 0 6px 6px; }
+        .item { padding: 12px 15px; border-bottom: 1px solid #e1e4e8; cursor: pointer; display: flex; align-items: center; transition: background 0.15s; }
+        .item:last-child { border-bottom: none; border-radius: 0 0 6px 6px; }
+        .item:hover { background-color: #f6f8fa; }
+        
+        /* Icons & Text */
+        .icon { margin-right: 12px; font-size: 1.2em; min-width: 24px; text-align: center; }
+        .item-name { flex-grow: 1; font-weight: 500; color: #24292e; text-decoration: none; }
+        .file-link { color: #24292e; text-decoration: none; width: 100%; display: flex; align-items: center; }
+        .file-link:hover .item-name { color: #0366d6; text-decoration: underline; }
+        
+        .loading { text-align: center; padding: 20px; color: #666; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <h1>📚 Thư Viện Đề Thi</h1>
-    <input type="text" id="search" class="search-box" placeholder="🔍 Nhập tên bài, tên chương hoặc khối để tìm..." onkeyup="filterFiles()">
-    <ul id="file-list">Đang tải dữ liệu...</ul>
+    
+    <div class="search-container">
+        <input type="text" id="search" class="search-box" placeholder="🔍 Tìm nhanh bài, chương hoặc khối..." onkeyup="handleSearch()">
+    </div>
+
+    <div id="breadcrumb" class="breadcrumb">
+        <span onclick="navigateTo([])">🏠 Trang chủ</span>
+    </div>
+
+    <ul id="file-list">
+        <li class="loading">⏳ Đang tải dữ liệu từ GitHub...</li>
+    </ul>
 
     <script>
-        // --- CẤU HÌNH ---
-        const USERNAME = 'nvquyet1701'; // Ví dụ: nguyenvana
-        const REPO_NAME = 'thu-vien-de-thi';  // Ví dụ: thu-vien-de-thi
-        // ----------------
-        
-        const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO_NAME}/git/trees/main?recursive=1`;
-        let allFiles = [];
+        // --- CẤU HÌNH (Thay đổi thông tin của bạn ở đây) ---
+        const USERNAME = 'TEN_GITHUB_CUA_BAN'; // Ví dụ: nguyenvana
+        const REPO_NAME = 'TEN_REPO_CUA_BAN';  // Ví dụ: thu-vien-de-thi
+        // ---------------------------------------------------
 
+        const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO_NAME}/git/trees/main?recursive=1`;
+        let allItems = []; // Chứa toàn bộ dữ liệu tải về
+        let currentPath = []; // Mảng lưu vị trí hiện tại, vd: ['Khoi-10', 'Chuong-1']
+
+        // 1. Tải dữ liệu
         async function fetchFiles() {
             try {
                 const response = await fetch(apiUrl);
                 const data = await response.json();
                 
-                // Lọc chỉ lấy file (không lấy folder) và bỏ qua file index.html
-                allFiles = data.tree.filter(item => item.type === 'blob' && item.path !== 'index.html');
-                displayFiles(allFiles);
-            } catch (error) {
-                document.getElementById('file-list').innerHTML = '<li style="padding:15px; color:red">Lỗi: Không tải được dữ liệu. Kiểm tra lại Tên User/Repo.</li>';
-            }
-        }
-
-        function displayFiles(files) {
-            const list = document.getElementById('file-list');
-            list.innerHTML = '';
-            files.forEach(file => {
-                // Tạo link tải về
-                const fileUrl = `https://github.com/${USERNAME}/${REPO_NAME}/blob/main/${file.path}`;
-                
-                // Tách đường dẫn để hiển thị đẹp hơn
-                const parts = file.path.split('/');
-                const fileName = parts.pop(); // Tên file
-                const folderPath = parts.join(' > '); // Đường dẫn thư mục
-                
-                const li = document.createElement('li');
-                li.className = 'file-item';
-                li.innerHTML = `
-                    <div>
-                        <span class="path-tag">${folderPath}</span>
-                        <a href="${fileUrl}" target="_blank">${fileName}</a>
-                    </div>
-                `;
-                list.appendChild(li);
-            });
-        }
-
-        function filterFiles() {
-            const query = document.getElementById('search').value.toLowerCase();
-            const filtered = allFiles.filter(file => file.path.toLowerCase().includes(query));
-            displayFiles(filtered);
-        }
-
-        fetchFiles();
-    </script>
-</body>
-</html>
+                // Lọc bỏ file hệ thống
+                allItems = data.tree.filter(item => item
