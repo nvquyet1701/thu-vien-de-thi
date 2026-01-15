@@ -53,8 +53,8 @@
 
     <script>
         // --- CẤU HÌNH (Thay đổi thông tin của bạn ở đây) ---
-        const USERNAME = 'nvquyet1701'; // Ví dụ: nguyenvana
-        const REPO_NAME = 'thu-vien-de-thi';  // Ví dụ: thu-vien-de-thi
+        const USERNAME = 'TEN_GITHUB_CUA_BAN'; // Ví dụ: nguyenvana
+        const REPO_NAME = 'TEN_REPO_CUA_BAN';  // Ví dụ: thu-vien-de-thi
         // ---------------------------------------------------
 
         const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO_NAME}/git/trees/main?recursive=1`;
@@ -68,5 +68,145 @@
                 const data = await response.json();
                 
                 // Lọc bỏ file hệ thống
-                allItems = data.tree.filter(item => item
+                allItems = data.tree.filter(item => item.path !== 'index.html' && item.path !== '.gitignore');
+                renderView(); // Hiển thị lần đầu (Trang chủ)
+            } catch (error) {
+                document.getElementById('file-list').innerHTML = '<li class="item" style="color:red">❌ Lỗi tải dữ liệu. Kiểm tra lại Tên User/Repo trong file index.html</li>';
+            }
+        }
 
+        // 2. Logic Hiển thị (Quan trọng nhất)
+        function renderView(isSearch = false, searchResults = []) {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+
+            // Nếu đang search thì hiển thị kết quả search
+            if (isSearch) {
+                document.getElementById('breadcrumb').classList.add('hidden'); // Ẩn breadcrumb khi search
+                if (searchResults.length === 0) {
+                    list.innerHTML = '<li class="item" style="color:#666">Không tìm thấy kết quả nào.</li>';
+                    return;
+                }
+                searchResults.forEach(file => renderFileItem(list, file, true));
+                return;
+            }
+
+            // Nếu không search -> Hiển thị theo thư mục (Folder View)
+            document.getElementById('breadcrumb').classList.remove('hidden');
+            updateBreadcrumb();
+
+            // Lấy danh sách item ở cấp hiện tại
+            const currentLevelItems = getItemsAtCurrentPath();
+            
+            // Render Folder trước
+            currentLevelItems.folders.forEach(folderName => {
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.onclick = () => {
+                    currentPath.push(folderName); // Đi sâu vào 1 cấp
+                    document.getElementById('search').value = ''; // Xóa tìm kiếm nếu có
+                    renderView();
+                };
+                li.innerHTML = `<span class="icon">📁</span> <span class="item-name">${folderName}</span> <span style="color:#ccc">›</span>`;
+                list.appendChild(li);
+            });
+
+            // Render File sau
+            currentLevelItems.files.forEach(file => renderFileItem(list, file));
+
+            if (currentLevelItems.folders.length === 0 && currentLevelItems.files.length === 0) {
+                 list.innerHTML = '<li class="item" style="color:#666">Thư mục trống</li>';
+            }
+        }
+
+        // Hàm hỗ trợ: Lọc item ở cấp hiện tại
+        function getItemsAtCurrentPath() {
+            const prefix = currentPath.join('/');
+            const folders = new Set();
+            const files = [];
+
+            allItems.forEach(item => {
+                // Kiểm tra xem item có nằm trong folder hiện tại không
+                if (item.path.startsWith(prefix ? prefix + '/' : '')) {
+                    // Cắt bỏ phần prefix để lấy phần đuôi
+                    const relativePath = prefix ? item.path.slice(prefix.length + 1) : item.path;
+                    const parts = relativePath.split('/');
+
+                    if (parts.length > 1) {
+                        // Đây là folder con (vì còn dấu / phía sau)
+                        folders.add(parts[0]);
+                    } else {
+                        // Đây là file nằm ngay ở cấp này
+                        if (item.type === 'blob') files.push(item);
+                    }
+                }
+            });
+            // Sắp xếp folder theo tên
+            return { folders: Array.from(folders).sort(), files: files };
+        }
+
+        // Hàm hỗ trợ: Vẽ giao diện 1 file
+        function renderFileItem(container, file, showFullPath = false) {
+            const url = `https://github.com/${USERNAME}/${REPO_NAME}/blob/main/${file.path}`;
+            const parts = file.path.split('/');
+            const fileName = parts.pop();
+            const displayName = showFullPath ? file.path : fileName; // Nếu search thì hiện full path
+
+            const li = document.createElement('li');
+            li.className = 'item';
+            li.innerHTML = `
+                <a href="${url}" target="_blank" class="file-link">
+                    <span class="icon">📄</span> 
+                    <span class="item-name">${displayName}</span>
+                </a>
+            `;
+            container.appendChild(li);
+        }
+
+        // 3. Xử lý tìm kiếm
+        function handleSearch() {
+            const query = document.getElementById('search').value.toLowerCase().trim();
+            if (!query) {
+                renderView(); // Trả về chế độ folder nếu ô tìm kiếm rỗng
+                return;
+            }
+            // Lọc toàn bộ file có tên chứa từ khóa
+            const results = allItems.filter(item => 
+                item.type === 'blob' && item.path.toLowerCase().includes(query)
+            );
+            renderView(true, results);
+        }
+
+        // 4. Xử lý Breadcrumb (Thanh điều hướng)
+        function updateBreadcrumb() {
+            const bc = document.getElementById('breadcrumb');
+            bc.innerHTML = '<span onclick="navigateTo([])">🏠 Trang chủ</span>';
+            
+            let accumPath = [];
+            currentPath.forEach((folder, index) => {
+                bc.innerHTML += ' <span>/</span> ';
+                accumPath.push(folder);
+                
+                // Nếu là folder cuối cùng thì không cho click (bold), ngược lại tạo link click
+                if (index === currentPath.length - 1) {
+                    bc.innerHTML += `<span class="current">${folder}</span>`;
+                } else {
+                    // Clone mảng để tránh tham chiếu
+                    const pathForClick = [...accumPath]; 
+                    const span = document.createElement('span');
+                    span.innerText = folder;
+                    span.onclick = () => navigateTo(pathForClick);
+                    bc.appendChild(span);
+                }
+            });
+        }
+
+        function navigateTo(path) {
+            currentPath = path;
+            renderView();
+        }
+
+        fetchFiles();
+    </script>
+</body>
+</html>
